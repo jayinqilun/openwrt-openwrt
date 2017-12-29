@@ -171,6 +171,7 @@ get_status_led() {
 	k2p|\
 	m3|\
 	mir3g|\
+	miwifi-mini|\
 	miwifi-nano|\
 	xiaomi,miwifi-r3)
 		status_led="$boardname:blue:status"
@@ -220,7 +221,6 @@ get_status_led() {
 	mikrotik,rbm33g)
 		status_led="$boardname:green:usr"
 		;;
-	miwifi-mini|\
 	zte-q7)
 		status_led="$boardname:red:status"
 		;;
