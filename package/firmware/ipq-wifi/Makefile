@@ -14,7 +14,7 @@ define Build/Compile
 endef
 
 #ALLWIFIBOARDS:=<devicename>
-ALLWIFIBOARDS:=zyxel_nbg6617 zyxel_wre6606
+ALLWIFIBOARDS:=rt-acrh17 zyxel_nbg6617 zyxel_wre6606
 ALLWIFIPACKAGES:=$(foreach BOARD,$(ALLWIFIBOARDS),ipq-wifi-$(BOARD))
 
 define Package/ipq-wifi-default
@@ -48,6 +48,7 @@ Don't install it for any other device!
   PREV_BOARD+=ipq-wifi-$(1)
 endef
 
+$(eval $(call generate-ipq-wifi-package,rt-acrh17,board-rt-acrh17.bin,ASUS RT-ACRH17/RT-AC82U/RT-AC42U))
 $(eval $(call generate-ipq-wifi-package,zyxel_wre6606,board-zyxel_wre6606.bin,ZyXEL WRE6606))
 #$(eval $(call generate-ipq-wifi-package,<devicename>,<filename>,<displayname>))
 $(eval $(call generate-ipq-wifi-package,zyxel_nbg6617,board-zyxel_nbg6617.bin,ZyXEL NBG6617))
