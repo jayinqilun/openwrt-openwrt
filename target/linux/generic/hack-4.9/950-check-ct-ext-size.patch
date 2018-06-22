@@ -1,0 +1,16 @@
+diff --git a/net/netfilter/nf_conntrack_extend.c b/net/netfilter/nf_conntrack_extend.c
+index 008299b7f78f..925d3acc8ab9 100644
+--- a/net/netfilter/nf_conntrack_extend.c
++++ b/net/netfilter/nf_conntrack_extend.c
+@@ -101,6 +101,11 @@ void *__nf_ct_ext_add_length(struct nf_conn *ct, enum nf_ct_ext_id id,
+ 	newlen = newoff + t->len + var_alloc_len;
+ 	rcu_read_unlock();
+ 
++	if (newlen > 255u) {
++		printk("nf_ct_ext_add id=%d fail with size overflow (old->len=%u, newlen=%u)\n", id, old ? old->len : 0, newlen);
++		return NULL;
++	}
++
+ 	new = __krealloc(old, newlen, gfp);
+ 	if (!new)
+ 		return NULL;
