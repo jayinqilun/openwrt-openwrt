@@ -39,10 +39,6 @@
 			status = "okay";
 			pinctrl-0 = <&mdio_pins>;
 			pinctrl-names = "default";
-			/delete-node/ ethernet-phy@0;
-			/delete-node/ ethernet-phy@2;
-			/delete-node/ ethernet-phy@3;
-			/delete-node/ ethernet-phy@4;
 		};
 
 		/* It is a 56-bit counter that supplies the count to the ARM arch
@@ -102,9 +98,7 @@
 		};
 
 		edma@c080000 {
-			qcom,single-phy;
 			qcom,num_gmac = <1>;
-			phy-mode = "rgmii-rxid";
 			status = "okay";
 		};
 	};
