@@ -24,11 +24,13 @@ define Device/arris
   IMAGE_SIZE := 72m
   KERNEL_SIZE := 4096k
   UBINIZE_OPTS := -E 5
-  MTDPARTS := ar934x-nfc:1m(u-boot)ro,1m(boot-flag),4m(kernel),68m(ubi),27m(config),1m(scfgmgr),4m(openwrt),1m(ft),2m(PKI),1m(caldata)ro
-  IMAGES := sysupgrade.tar factory.bin
+  MTDPARTS := ar934x-nfc:1m(u-boot)ro,1m(boot-flag),4m(kernel),32m(ubi_rsvd),4m(kernel2),32m(ubi),27m(config),1m(scfgmgr),4m(openwrt),1m(ft),2m(PKI),1m(caldata)ro
+  IMAGES := sysupgrade.tar kernel1.bin rootfs2.bin
   KERNEL := kernel-bin | patch-cmdline | lzma | uImage lzma
-  IMAGE/factory.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-ubi | check-size $$$$(IMAGE_SIZE)
+  #IMAGE/factory.bin := append-kernel | pad-to $$$$(KERNEL_SIZE) | append-ubi | check-size $$$$(IMAGE_SIZE)
   IMAGE/sysupgrade.tar := sysupgrade-tar
+  IMAGE/kernel1.bin := append-kernel | pad-to $$$$(KERNEL_SIZE)
+  IMAGE/rootfs2.bin := append-ubi | check-size $$$$(IMAGE_SIZE)
 endef
 TARGET_DEVICES += arris
 
