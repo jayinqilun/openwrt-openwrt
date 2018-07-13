@@ -58,6 +58,10 @@ preinit_set_mac_address() {
 	wrt160nl)
 		fetch_mac_from_mtd nvram lan_hwaddr wan_hwaddr
 		;;
+	arris)
+		mac_lan=$(mtd_get_mac_binary ft 0)
+		[ -n "$mac_lan" ] && ifconfig eth1 hw ether "$mac_lan"
+		;;
 	esac
 }
 
