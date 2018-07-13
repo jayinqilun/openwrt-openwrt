@@ -17,8 +17,10 @@
  *
  */
 
+#include <linux/gpio.h>
 #include <linux/platform_device.h>
 #include <linux/ar8216_platform.h>
+#include <linux/platform/ar934x_nfc.h>
 
 #include <asm/mach-ath79/ar71xx_regs.h>
 
@@ -34,16 +36,14 @@
 #include "dev-wmac.h"
 #include "machtypes.h"
 
-#define ARRIS_GPIO_LED_USB		4
-#define ARRIS_GPIO_LED_WLAN_5G		12
-#define ARRIS_GPIO_LED_WLAN_2G		13
-#define ARRIS_GPIO_LED_STATUS_RED	14
-#define ARRIS_GPIO_LED_WPS_RED		15
-#define ARRIS_GPIO_LED_STATUS_GREEN	19
-#define ARRIS_GPIO_LED_WPS_GREEN	20
+#define ARRIS_GPIO_EXT_WDT		18
+#define ARRIS_GPIO_LED_USB		22
+#define ARRIS_GPIO_LED_WLAN_5G		21
+#define ARRIS_GPIO_LED_WLAN_2G		2
+#define ARRIS_GPIO_LED_WPS_GREEN	23
 
-#define ARRIS_GPIO_BTN_WPS		16
-#define ARRIS_GPIO_BTN_RFKILL		21
+#define ARRIS_GPIO_BTN_WPS		19
+#define ARRIS_GPIO_BTN_RESET		17
 
 #define ARRIS_KEYS_POLL_INTERVAL	20	/* msecs */
 #define ARRIS_KEYS_DEBOUNCE_INTERVAL	(3 * ARRIS_KEYS_POLL_INTERVAL)
@@ -55,32 +55,22 @@
 
 static struct gpio_led arris_leds_gpio[] __initdata = {
 	{
-		.name		= "arris:green:status",
-		.gpio		= ARRIS_GPIO_LED_STATUS_GREEN,
-		.active_low	= 1,
-	},
-	{
-		.name		= "arris:red:status",
-		.gpio		= ARRIS_GPIO_LED_STATUS_RED,
-		.active_low	= 1,
-	},
-	{
 		.name		= "arris:green:wps",
 		.gpio		= ARRIS_GPIO_LED_WPS_GREEN,
 		.active_low	= 1,
 	},
 	{
-		.name		= "arris:red:wps",
-		.gpio		= ARRIS_GPIO_LED_WPS_RED,
-		.active_low	= 1,
-	},
-	{
-		.name		= "arris:red:wlan-2g",
+		.name		= "arris:green:wlan-2g",
 		.gpio		= ARRIS_GPIO_LED_WLAN_2G,
 		.active_low	= 1,
 	},
 	{
-		.name		= "arris:red:usb",
+		.name		= "arris:green:wlan-5g",
+		.gpio		= ARRIS_GPIO_LED_WLAN_5G,
+		.active_low	= 1,
+	},
+	{
+		.name		= "arris:green:usb",
 		.gpio		= ARRIS_GPIO_LED_USB,
 		.active_low	= 1,
 	}
@@ -96,11 +86,11 @@ static struct gpio_keys_button arris_gpio_keys[] __initdata = {
 		.active_low	= 1,
 	},
 	{
-		.desc		= "RFKILL button",
+		.desc		= "RESET button",
 		.type		= EV_KEY,
-		.code		= KEY_RFKILL,
+		.code		= KEY_RESTART,
 		.debounce_interval = ARRIS_KEYS_DEBOUNCE_INTERVAL,
-		.gpio		= ARRIS_GPIO_BTN_RFKILL,
+		.gpio		= ARRIS_GPIO_BTN_RESET,
 		.active_low	= 1,
 	},
 };
@@ -135,9 +125,35 @@ static struct mdio_board_info arris_mdio0_info[] = {
 	},
 };
 
+#define EXT_WDT_TIMEOUT_MS	100
+
+static struct timer_list gpio_wdt_timer;
+
+static void gpio_wdt_toggle(unsigned long gpio)
+{
+	static int state;
+
+	state = !state;
+	gpio_set_value(gpio, state);
+
+	mod_timer(&gpio_wdt_timer,
+		  jiffies + msecs_to_jiffies(EXT_WDT_TIMEOUT_MS));
+}
+
+static void __init feed_external_wdt(int gpio_wdt)
+{
+	if (gpio_wdt > -1) {
+		gpio_request_one(gpio_wdt, GPIOF_OUT_INIT_HIGH,
+				 "PT7A7514 watchdog");
+
+		setup_timer(&gpio_wdt_timer, gpio_wdt_toggle, gpio_wdt);
+		gpio_wdt_toggle(gpio_wdt);
+	}
+}
+
 static void __init arris_setup(void)
 {
-	u8 *art = (u8 *) KSEG1ADDR(0x1fff0000);
+	feed_external_wdt(ARRIS_GPIO_EXT_WDT);
 
 	/* GMAC0 of the AR8327 switch is connected to GMAC1 via SGMII */
 	arris_ar8327_pad0_cfg.mode = AR8327_PAD_MAC_SGMII;
@@ -162,14 +178,15 @@ static void __init arris_setup(void)
 					arris_gpio_keys);
 
 	ath79_register_usb();
+
+	ath79_nfc_set_ecc_mode(AR934X_NFC_ECC_HW);
 	ath79_register_nfc();
 
-	ath79_register_wmac(art + ARRIS_WMAC_CALDATA_OFFSET, NULL);
+	ath79_register_wmac_simple();
 
 	ath79_setup_qca955x_eth_cfg(QCA955X_ETH_CFG_RGMII_EN);
 
 	ath79_register_mdio(0, 0x0);
-	ath79_init_mac(ath79_eth0_data.mac_addr, art + ARRIS_MAC0_OFFSET, 0);
 
 	mdiobus_register_board_info(arris_mdio0_info,
 				    ARRAY_SIZE(arris_mdio0_info));
@@ -181,7 +198,7 @@ static void __init arris_setup(void)
 
 	ath79_register_eth(0);
 
-	/* GMAC1 is connected tot eh SGMII interface */
+	/* GMAC1 is connected to the SGMII interface */
 	ath79_eth1_data.phy_if_mode = PHY_INTERFACE_MODE_SGMII;
 	ath79_eth1_data.speed = SPEED_1000;
 	ath79_eth1_data.duplex = DUPLEX_FULL;
